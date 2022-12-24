@@ -1,0 +1,33 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello
+spec:
+  selector:
+    matchLabels:
+      app: hello
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hello
+    spec:
+      containers:
+      - name: hello
+        image: dummy:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5050
+        resources:
+            limits:
+              memory: "1024Mi"
+              cpu: "300m"
+            requests:
+              memory: "50Mi"
+              cpu: "50m"
+      #
+      imagePullSecrets:
+      - name: docker-registry
+
+            

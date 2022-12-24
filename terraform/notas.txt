@@ -1,0 +1,13 @@
+# 
+terraform init
+terraform refresh
+terraform validate
+terraform fmt -check
+terraform plan -out tfplan
+terraform apply tfplan
+#
+aws eks --region $(terraform output -raw region) update-kubeconfig \
+    --name $(terraform output -raw cluster_name)
+
+#
+kubectl cluster-info

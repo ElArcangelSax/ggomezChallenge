@@ -1,0 +1,73 @@
+on: pull_request
+jobs:
+  validate-terraform:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          terraform:
+            - 'terraform/**'
+    #
+    - uses: hashicorp/setup-terraform@v2
+    #
+    # kubernetes
+    #            
+    - name: Configure AWS Credentials(terraform)
+      uses: aws-actions/configure-aws-credentials@v1
+      if: steps.filter.outputs.terraform == 'true'
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+    #
+    - name: Terraform fmt(terraform)
+      id: fmt-terraform
+      run: terraform fmt -check
+      if: steps.filter.outputs.terraform == 'true'
+      working-directory: terraform/
+      continue-on-error: true
+    #
+    - name: Terraform Init(terraform)
+      id: init-terraform
+      run: terraform init
+      if: steps.filter.outputs.terraform == 'true'
+      working-directory: terraform/
+    #
+    - name: Terraform Validate(terraform)
+      id: validate-terraform
+      run: terraform validate -no-color
+      if: steps.filter.outputs.terraform == 'true'
+      working-directory: terraform
+    #
+    - name: Terraform Plan(terraform)
+      id: plan-terraform
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        CLUSTER_NAMESPACE: ${{ secrets.CLUSTER_NAMESPACE }}
+      shell: bash
+      run: |
+            #set -x
+            echo "Bajando kubectl"
+            if [ -e kubectl ]; then rm kubectl ; fi
+            curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+            chmod +x ./kubectl
+            mv ./kubectl /usr/local/bin/kubectl
+            #
+            if [ -d ~/.kube ]; then rm -fr ~/.kube ; fi
+            mkdir ~/.kube
+            echo > ~/.kube/config
+            #
+            echo "Obteniendo credenciales del cluster"
+            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $CLUSTER_NAMESPACE
+            #
+            terraform plan -no-color
+            #
+      if: steps.filter.outputs.terraform == 'true'
+      continue-on-error: true
+      working-directory: terraform/
+    
