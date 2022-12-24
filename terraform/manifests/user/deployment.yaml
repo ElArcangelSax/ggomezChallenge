@@ -2,19 +2,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello
+  name: user
 spec:
   selector:
     matchLabels:
-      app: hello
+      app: user
   replicas: 1
   template:
     metadata:
       labels:
-        app: hello
+        app: user
     spec:
       containers:
-      - name: hello
+      - name: user
         image: dummy:latest
         imagePullPolicy: Always
         ports:
